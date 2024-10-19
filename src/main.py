@@ -3,15 +3,11 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 import json
-import pytz
-from datetime import datetime
 import table
-import cookies
-from pynput import keyboard
+from utils import convertTimestamp, isMoreRecent
+from cookies import reloadCookies, initWithCookies
 from candidatos import saoPaulo
-import pyautogui as pa
 
-myCookies = cookies.getCookies()
 
 esperas = {
     'video': .3,
@@ -19,48 +15,6 @@ esperas = {
     'pagina': 2,
     'cookie-page': .5
 }
-
-
-# Utils
-
-
-def pressCombination():
-    pa.press('f5')
-    # controller = keyboard.Controller()
-    # controller.press(keyboard.Key.cmd)
-    # controller.press('r')
-    # controller.release('r')
-    # controller.release(keyboard.Key.cmd)
-
-
-def convertTimestamp(ts):
-    dt = datetime.fromtimestamp(int(ts))
-    brt = pytz.timezone('America/Sao_Paulo')
-    dt_br = dt.astimezone(brt)
-    data_formatada = dt_br.strftime('%d/%m/%Y')
-    return data_formatada
-
-
-def isMoreRecent(tsX, tsY):
-    return int(tsX) >= int(tsY)
-
-
-# Cookies
-
-
-def initWithCookies(driver):
-    driver.get('https://www.tiktok.com')
-    time.sleep(esperas['cookie-page'])
-    for cookie in myCookies:
-        driver.add_cookie(cookie)
-
-
-def reloadCookies(driver):
-    driver.delete_all_cookies()
-    pressCombination()
-    newCookies = cookies.getCookies()
-    for cookie in newCookies:
-        driver.add_cookie(cookie)
 
 
 # Scraping
@@ -218,18 +172,19 @@ def getPostStatsFromUser(userUrl, driver):
 
     else:
         print('Nenhum link encontrado!')
-        initWithCookies(driver)
+        initWithCookies(driver, esperas['cookie-page'])
         getPostStatsFromUser(userUrl, driver)
 
 
 def getMultPostStatsFromUsers(users):
     driver = webdriver.Chrome()
-    initWithCookies(driver)
+    initWithCookies(driver, esperas['cookie-page'])
 
     for user in users:
         getPostStatsFromUser(user, driver)
 
     driver.quit()
+
 
 sp = [cand['tiktok'] for cand in saoPaulo if cand['tiktok']]
 print(sp)

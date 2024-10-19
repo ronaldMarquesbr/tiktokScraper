@@ -1,9 +1,10 @@
 import browser_cookie3
+import time
+from utils import pressCombination
 
 
 def getCookies():
-    keyFile = 'C:\\Users\\Ronald\\AppData\\Local\\Google\\Chrome\\User Data\\Local State'
-    cookies = browser_cookie3.chrome(domain_name='.tiktok.com', key_file=keyFile)  # Ou browser_cookie3.firefox(), etc., dependendo do navegador
+    cookies = browser_cookie3.chrome(domain_name='.tiktok.com')
     allCookies = []
 
     for cookie in cookies:
@@ -15,4 +16,17 @@ def getCookies():
     return allCookies
 
 
-print(getCookies())
+def initWithCookies(driver, espera):
+    myCookies = getCookies()
+    driver.get('https://www.tiktok.com')
+    time.sleep(espera)
+    for cookie in myCookies:
+        driver.add_cookie(cookie)
+
+
+def reloadCookies(driver):
+    driver.delete_all_cookies()
+    pressCombination()
+    newCookies = getCookies()
+    for cookie in newCookies:
+        driver.add_cookie(cookie)
