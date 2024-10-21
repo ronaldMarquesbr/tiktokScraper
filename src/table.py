@@ -1,10 +1,20 @@
-def createHeader(url):
-    with open(f'{url.split('/')[3][1:]}.csv', 'w', encoding='utf-8') as file:
-        data = ['author', 'timestamp', 'date', 'likes', 'comments', 'shares', 'playCount', 'saves', 'duration', 'tags', 'link']
-        for k in data:
-            file.write(k)
-            file.write(';')
+def createTableFromDict(filename, contentList):
+    with open(f'{filename}.csv', 'w', encoding='utf-8') as file:
+        header = list(contentList[0].keys())
+        for column in header:
+            file.write(column)
+            if header[-1] != column:
+                file.write(';')
+
         file.write('\n')
+
+        for row in contentList:
+            for key in row:
+                file.write(str(row[key]))
+                if header[-1] != key:
+                    file.write(';')
+
+            file.write('\n')
 
 
 def createRow(data):
