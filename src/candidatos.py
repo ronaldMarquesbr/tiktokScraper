@@ -74,7 +74,7 @@ candidatos = {
             'partido': 'mobiliza',
             'tiktok': 'https://www.tiktok.com/@wilkerbarretoam',
         }
-    ],'salvador': [
+    ], 'salvador': [
         {
             'nome': 'Bruno Reis',
             'partido': 'união',

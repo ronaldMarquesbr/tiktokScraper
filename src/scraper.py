@@ -4,10 +4,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import JavascriptException
 import json
-import table
 from utils import convertTimestamp, isMoreRecent
 from cookies import initWithCookies
-from candidatos import goiania
 import threading
 import queue
 

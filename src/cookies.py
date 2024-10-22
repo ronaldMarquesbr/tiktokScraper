@@ -1,6 +1,5 @@
 import browser_cookie3
 import time
-from utils import pressCombination
 
 
 def getCookies():
@@ -16,17 +15,9 @@ def getCookies():
     return allCookies
 
 
-def initWithCookies(driver, espera):
+def initWithCookies(driver, waitingTime):
     myCookies = getCookies()
     driver.get('https://www.tiktok.com')
-    time.sleep(espera)
+    time.sleep(waitingTime)
     for cookie in myCookies:
-        driver.add_cookie(cookie)
-
-
-def reloadCookies(driver):
-    driver.delete_all_cookies()
-    pressCombination()
-    newCookies = getCookies()
-    for cookie in newCookies:
         driver.add_cookie(cookie)

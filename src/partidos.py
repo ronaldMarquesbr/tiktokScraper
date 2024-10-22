@@ -10,15 +10,22 @@ def getPartyAlignment(party):
         return 'centro'
 
 
-def getCandidateParty(candidateDict):
-    return candidateDict["partido"]
+def getCandidateParty(candidateName, state):
+    candidateObject = [candidate for candidate in candidatos[state]
+                       if candidate['nome'] == candidateName][0]
+
+    return candidateObject["partido"]
+
+
+def getCandidatePartyFromCandidatesObj(candidateObj):
+    return candidateObj["partido"]
 
 
 def getPartiesFromCandidateList(candidateList):
     parties = set()
 
     for candidate in candidateList:
-        parties.add(getCandidateParty(candidate))
+        parties.add(getCandidatePartyFromCandidatesObj(candidate))
 
     return list(parties)
 
