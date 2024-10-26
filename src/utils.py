@@ -68,3 +68,9 @@ def createDictWithZeros(keysList):
 
     return newObj
 
+
+def convertStringToDatetimeFromSeries(dateSeries):
+    convertedDateSeries = dateSeries.map(lambda x: convertDateToTimestamp(x)).copy()
+
+    return convertedDateSeries
+

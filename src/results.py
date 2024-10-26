@@ -1,9 +1,9 @@
 import pandas as pd
-from files import getCandidateDataFrame, getStateFolder
+import matplotlib.pyplot as plt
+from files import getStateFolder, getCandidatePostsBeforeElection
 from partidos import getPartyAlignment, getCandidateParty
 from candidatos import candidatos
-from table import createTableFromDf
-from utils import createDictWithZeros, convertDateToTimestamp
+from utils import createDictWithZeros
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 0)
@@ -11,7 +11,7 @@ pd.set_option('display.colheader_justify', 'left')
 
 
 def getCandidateOverview(candidateName, state):
-    candidateObject = getCandidateDataFrame(candidateName, state)
+    candidateObject = getCandidatePostsBeforeElection(candidateName, state)
     candidateDf = candidateObject['df']
     candidateOverview = {
         'name': candidateName,
@@ -23,16 +23,17 @@ def getCandidateOverview(candidateName, state):
         'playCount': candidateDf['playCount'].sum(),
         'saves': candidateDf['saves'].sum(),
         'duration': candidateDf['duration'].sum(),
-        'postsCount': len(candidateDf)
+        'postsCount': len(candidateDf),
+        'votes': [candidate['votos'] for candidate in candidatos[state] if candidate['nome'] == candidateName][0],
     }
 
     return candidateOverview
 
 
-def getStateOverview(state):
+def getStateOverviewBySide(state):
     stateFolder = getStateFolder(state)
     stateCandidatesOverview = [getCandidateOverview(candidate[:-4], state) for candidate in stateFolder]
-    keyStats = [key for key in stateCandidatesOverview[0].keys() if key not in ['name', 'party', 'side']]
+    keyStats = [key for key in stateCandidatesOverview[0].keys() if key not in ['name', 'party', 'side', 'votes']]
     stateOverview = {'esquerda': createDictWithZeros(keyStats),
                      'direita': createDictWithZeros(keyStats),
                      'centro': createDictWithZeros(keyStats)}
@@ -44,12 +45,18 @@ def getStateOverview(state):
     return stateOverview
 
 
+def getStateOverview(state):
+    stateFolder = getStateFolder(state)
+    stateCandidatesOverview = [getCandidateOverview(candidate[:-4], state) for candidate in stateFolder]
+    return stateCandidatesOverview
+
+
 def getOverviewFromCountry():
     states = candidatos.keys()
     countryOverview = {'direita': {}, 'esquerda': {}, 'centro': {}}
 
     for state in states:
-        stateOverview = getStateOverview(state)
+        stateOverview = getStateOverviewBySide(state)
         for side in stateOverview:
             for key in stateOverview[side]:
                 countryOverview[side][key] = stateOverview[side][key] + countryOverview[side].setdefault(key, 0)
@@ -81,3 +88,31 @@ def getTikTokUseFromCountry():
             tiktokUse[side]['no'] += stateUse[side]['no']
 
     return tiktokUse
+
+
+def createResultChart(state):
+    stateDf = pd.DataFrame(getStateOverview(state)).sort_values('votes', ascending=False)
+    categorias = stateDf['name']
+    valores_barras = stateDf['votes']
+    valores_linhas = stateDf['shares'] + stateDf['likes'] + stateDf['comments'] + stateDf['postsCount']
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+
+    plt.bar(categorias, valores_barras, color='lightblue', label='Votos')
+
+    plt.plot(categorias, valores_linhas, color='red', marker='o', label='Interações')
+
+    plt.title(state)
+    plt.xlabel('Candidato')
+    plt.ylabel('Valores')
+    ax.tick_params(axis='both',
+                   labelsize=12,
+                   left=False,
+                   labelleft=False,
+                   labelrotation=90)
+
+    plt.legend()
+    plt.tight_layout()
+
+    plt.savefig(f"{state}.png", dpi=300, bbox_inches='tight')
+    plt.close(fig)

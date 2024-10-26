@@ -1,10 +1,11 @@
 import os
 import pandas
+from utils import convertDateToTimestamp, convertStringToDatetimeFromSeries
 
 pandas.set_option('display.max_columns', None)
 pandas.set_option('display.width', 0)
 pandas.set_option('display.colheader_justify', 'left')
-rootPath = '/Users/ronaldmarques/Documents/amaisnova'
+rootPath = '/Users/ronaldmarques/Documents/novos'
 
 
 def getStateFolder(state):
@@ -19,3 +20,14 @@ def getCandidateDataFrame(candidateName, state):
     candidateDf = pandas.read_csv(candidateFilePath, delimiter=';')
 
     return {'nome': candidateName, 'df': candidateDf}
+
+
+def getCandidatePostsBeforeElection(candidateName, state):
+    candidate = getCandidateDataFrame(candidateName, state)
+    candidateDf = candidate['df']
+
+    candidatePostsBeforeElection = candidateDf[
+        convertStringToDatetimeFromSeries(candidateDf['date']) <=
+        convertDateToTimestamp('06/10/2024')].copy()
+
+    return {'nome': candidateName, 'df': candidatePostsBeforeElection}

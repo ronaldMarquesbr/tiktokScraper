@@ -5,22 +5,23 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import JavascriptException
 import json
 from utils import convertTimestamp, isMoreRecent
-from cookies import initWithCookies
+from table import createTableFromDict
 import threading
 import queue
+from candidatos import candidatos
 
 
 esperas = {
     'video': .3,
     'foto': .55,
-    'pagina': 2.75,
+    'pagina': 3,
     'cookie-page': .5
 }
 
 
 # Scraping
 
-def createChromeDriver():
+def createOptimizedChromeDriver():
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
@@ -36,10 +37,12 @@ def getPostedDateFromPost(postUrl, driver):
     driver.execute_script("window.open('https://www.google.com', '_blank');")
     allWindows = driver.window_handles
     driver.switch_to.window(allWindows[1])
+    print(f"Buscando data da postagem {postUrl}")
     postInfo = getVideoItemStruct(postUrl, driver) if 'video' in postUrl else getPhotoItemStruct(postUrl, driver)
     driver.close()
     driver.switch_to.window(previousDriver)
     postedTimestamp = postInfo['createTime']
+    print(f"Data da postagem {postUrl}: {convertTimestamp(postedTimestamp)}")
 
     return postedTimestamp
 
@@ -60,12 +63,17 @@ def getPostsLinksFromUser(userUrl, driver):
     time.sleep(esperas['pagina'])
     links = getNonPinnedPosts(driver)
     linksAmount = len(links)
-    print(f"{linksAmount} encontrados")
+    print(f"{linksAmount} nao filtrados encontrados")
 
     if len(links) > 0:
         while isMoreRecent(getPostedDateFromPost(links[-1], driver), '1723766400'):
             driver.execute_script("window.scrollTo(window.scrollY, document.body.scrollHeight);")
-            time.sleep(esperas['pagina'])
+            time.sleep(1.25)
+            driver.execute_script("window.scrollTo(window.scrollY, document.body.scrollHeight);")
+            time.sleep(1.25)
+            driver.execute_script("window.scrollTo(window.scrollY, window.scrollY - 100);")
+            driver.execute_script("window.scrollTo(window.scrollY, document.body.scrollHeight);")
+            time.sleep(1.25)
             links = getNonPinnedPosts(driver)
 
             if len(links) == linksAmount:
@@ -73,7 +81,7 @@ def getPostsLinksFromUser(userUrl, driver):
                 break
 
             linksAmount = len(links)
-            print(f"{linksAmount} encontrados")
+            print(f"{linksAmount} nao filtrados encontrados")
 
     return links
 
@@ -95,6 +103,7 @@ def getPostInfoFromItemStruct(itemStruct):
 
 
 def getVideoItemStruct(videoUrl, driver):
+    print(f"Buscando video {videoUrl}")
     driver.get(videoUrl)
     time.sleep(esperas['video'])
     try:
@@ -111,6 +120,7 @@ def getVideoItemStruct(videoUrl, driver):
 
 
 def getPhotoItemStruct(photoUrl, driver):
+    print(f"Buscando foto {photoUrl}")
     driver.get(photoUrl)
     time.sleep(esperas['foto'])
 
@@ -140,19 +150,28 @@ def getPostStats(postUrl, driver):
     return essentialInfo
 
 
-def getStatsFromUserThreaded(tiktokProfileUrl):
-    driver = createChromeDriver()
-    initWithCookies(driver, esperas['cookie-page'])
+def getStatsFromUserThreaded(tiktokProfileUrl, cookies):
+    driver = createOptimizedChromeDriver()
+    driver.get('https://tiktok.com')
+    time.sleep(.75)
+    for cookie in cookies:
+        driver.add_cookie(cookie)
+
+    driver.get(tiktokProfileUrl)
+
     postsLinks = getPostsLinksFromUser(tiktokProfileUrl, driver)
+
+    newCookies = driver.get_cookies()
     driver.quit()
+
     midIndex = len(postsLinks) // 2
     outputQueue = queue.Queue()
 
     postsLinks1 = postsLinks[:midIndex]
     postsLinks2 = postsLinks[midIndex:]
 
-    thread1 = threading.Thread(target=getPostsStatsFromUser, args=(postsLinks1, outputQueue))
-    thread2 = threading.Thread(target=getPostsStatsFromUser, args=(postsLinks2, outputQueue))
+    thread1 = threading.Thread(target=getPostsStatsFromUser, args=(postsLinks1, cookies, outputQueue))
+    thread2 = threading.Thread(target=getPostsStatsFromUser, args=(postsLinks2, cookies, outputQueue))
 
     thread1.start()
     thread2.start()
@@ -165,12 +184,19 @@ def getStatsFromUserThreaded(tiktokProfileUrl):
     while not outputQueue.empty():
         posts.append(outputQueue.get())
 
-    return posts[0] + posts[1]
+    sortedData = sorted(posts[0] + posts[1], key=lambda x: int(x['timestamp']), reverse=True)
+    print(f"\n/----------------------/\nO perfil {tiktokProfileUrl.split('/')[-1]} possui {len(sortedData)} postagens\n"
+          f"e a mais antiga eh da data: {sortedData[-1]['date']} e a mais recente eh da data: {sortedData[0]['date']}")
+    print("\n/----------------------/\n")
+    return {'posts': sortedData, 'cookies': newCookies}
 
 
-def getPostsStatsFromUser(postsLinks, output):
-    driver = createChromeDriver()
-    initWithCookies(driver, esperas['cookie-page'])
+def getPostsStatsFromUser(postsLinks, cookies, output):
+    driver = createOptimizedChromeDriver()
+    driver.get('https://www.tiktok.com')
+    time.sleep(.75)
+    for cookie in cookies:
+        driver.add_cookie(cookie)
 
     postsStats = []
     counter = 1
@@ -187,3 +213,17 @@ def getPostsStatsFromUser(postsLinks, output):
     output.put(postsStats)
 
     driver.quit()
+
+
+meuDriver = webdriver.Chrome()
+meuDriver.get('https://www.tiktok.com/@guilhermeboulos')
+input('calma')
+meusCookies = meuDriver.get_cookies()
+meuDriver.quit()
+
+for candidato in [c for c in candidatos['goiania'] if c['tiktok']]:
+    retornoCandidato = getStatsFromUserThreaded(candidato['tiktok'], meusCookies)
+    postCandidato = retornoCandidato['posts']
+    novosCookies = retornoCandidato['cookies']
+    meusCookies = novosCookies
+    createTableFromDict(candidato['nome'], postCandidato)

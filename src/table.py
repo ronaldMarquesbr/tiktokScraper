@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 from utils import formatNumber, changeLabelName
+import results as res
+import pandas as pd
 
 
 def createTableFromDict(filename, contentList):
@@ -42,3 +44,39 @@ def createTableFromDf(df, title):
     plt.tight_layout()
     plt.savefig(f"table.pdf", format='pdf', dpi=300)
     plt.close(fig)
+
+
+def createBarPlot(stateDf):
+    fs = 16
+    x = list(range(len(stateDf)))
+    y = stateDf['likes'].to_list()
+    labels = stateDf['name'].to_list()
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    barv = ax.bar(x, y, width=.5,
+                  color='red',
+                  tick_label=labels,
+                  edgecolor='blue',
+                  linewidth=2)
+    # barh = ax.barh(range(1, len(stateDf) + 1), stateDf['likes'],
+    #                height=.5,
+    #                color='blue',
+    #                edgecolor='red',
+    #                tick_label=stateDf['name'],
+    #                )
+    #
+    #
+    # for rect in barh:
+    #     h = rect.get_width()
+    #     t = rect.get_y() + rect.get_height() / 2.
+    #     ax.text(h, t, f'                     {h}',
+    #             ha='center', va='center', fontsize=fs)
+
+    ax.tick_params(axis='both',
+                   labelsize=fs,
+                   left=False,
+                   labelleft=False,
+                   labelrotation=90)
+
+    plt.tight_layout()
+    plt.show()
