@@ -5,7 +5,7 @@ from utils import convertDateToTimestamp, convertStringToDatetimeFromSeries
 pandas.set_option('display.max_columns', None)
 pandas.set_option('display.width', 0)
 pandas.set_option('display.colheader_justify', 'left')
-rootPath = '/Users/ronaldmarques/Documents/novos'
+rootPath = '/Users/ronaldmarques/Documents/novos oficial'
 
 
 def getStateFolder(state):

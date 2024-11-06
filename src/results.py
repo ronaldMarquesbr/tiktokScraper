@@ -75,6 +75,24 @@ def getTikTokUseFromState(state):
     return tiktokUse
 
 
+def getCountryOverview():
+    keys = ['likes', 'comments', 'shares', 'playCount', 'saves', 'duration', 'postsCount']
+    overviewDf = pd.DataFrame(columns=keys)
+    states = candidatos.keys()
+
+    for state in states:
+        stateOverview = {'estado': state}
+        candidatesOverview = pd.DataFrame(getStateOverview(state))
+
+        for key in keys:
+            stateOverview[key] = candidatesOverview[key].sum()
+
+        overviewDf = pd.concat([overviewDf, pd.Series(stateOverview).to_frame().T], ignore_index=True)
+
+    orderedOverview = overviewDf.sort_values(by='likes', ascending=False)
+    return orderedOverview
+
+
 def getTikTokUseFromCountry():
     states = candidatos.keys()
     tiktokUse = {'direita': {'yes': 0, 'no': 0},
@@ -116,3 +134,50 @@ def createResultChart(state):
 
     plt.savefig(f"{state}.png", dpi=300, bbox_inches='tight')
     plt.close(fig)
+
+
+def getPostsTimelineFromCandidate(candidateName, candidateState):
+    candidateDf = getCandidatePostsBeforeElection(candidateName, candidateState)['df']
+    dateCount = candidateDf['date'].value_counts()
+
+    return dateCount
+
+
+def getPostsTimelineFromState(stateName):
+    candidatesWithTikTok = [candidate for candidate in candidatos[stateName] if candidate['tiktok']]
+    candidatesTimelines = [(getPostsTimelineFromCandidate(candidate['nome'], stateName), candidate['nome'])
+                           for candidate in candidatesWithTikTok]
+
+    postsOverview = pd.DataFrame(columns=['date', 'postsCount', 'side'])
+    for candidateTimeline in candidatesTimelines:
+        timeline = candidateTimeline[0]
+
+        for date, count in timeline.items():
+            postsOverview[date] = postsOverview.get(date, 0) + count
+
+    return postsOverview
+
+
+def getPostsTimelineFromStateBySide(stateName):
+    candidatesWithTikTok = [candidate for candidate in candidatos[stateName] if candidate['tiktok']]
+    candidatesTimelines = [(getPostsTimelineFromCandidate(candidate['nome'], stateName), candidate['nome'])
+                           for candidate in candidatesWithTikTok]
+    sideTimelines = {side: pd.Series(dtype=pd.Int64Dtype()) for side in ['esquerda', 'direita', 'centro']}
+
+    for candidateTimeline in candidatesTimelines:
+        timeline = candidateTimeline[0]
+        candidateSide = getPartyAlignment(getCandidateParty(candidateTimeline[1], stateName))
+
+        for date, count in timeline.items():
+            sideTimelines[candidateSide][date] = sideTimelines[candidateSide].get(date, 0) + count
+
+    allDates = set()
+
+    for side in sideTimelines:
+        allDates = allDates | set(sideTimelines[side].index)
+
+    for side in sideTimelines:
+        for date in allDates:
+            sideTimelines[side][date] = sideTimelines[side].get(date, 0)
+
+    return sideTimelines
