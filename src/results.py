@@ -10,6 +10,24 @@ pd.set_option('display.width', 0)
 pd.set_option('display.colheader_justify', 'left')
 
 
+def sortSideTimelines(sideTimelines):
+    allDates = set()
+
+    for sideTimeline in sideTimelines.values():
+        allDates = allDates | set(sideTimeline.index.unique())
+
+    for sideTimeline in sideTimelines.values():
+        for date in allDates:
+            sideTimeline[date] = sideTimeline.get(date, 0)
+
+    for side in sideTimelines:
+        sideTimelines[side].index = pd.to_datetime(sideTimelines[side].index, format="%d/%m/%Y")
+        sideTimelines[side] = sideTimelines[side].sort_index()
+        sideTimelines[side].index = sideTimelines[side].index.map(lambda dt: dt.strftime("%d/%m/%Y"))
+
+    return sideTimelines
+
+
 def getCandidateOverview(candidateName, state):
     candidateObject = getCandidatePostsBeforeElection(candidateName, state)
     candidateDf = candidateObject['df']
@@ -143,6 +161,54 @@ def getPostsTimelineFromCandidate(candidateName, candidateState):
     return dateCount
 
 
+def getInfoTimelineFromCandidate(candidateName, candidateState, info):
+    candidateDf = getCandidatePostsBeforeElection(candidateName, candidateState)['df']
+    dates = candidateDf['date'].unique().tolist()
+    candidateTimeline = pd.Series()
+
+    for date in dates:
+        candidateTimeline[date] = candidateDf[candidateDf['date'] == date][info].sum()
+
+    return candidateTimeline
+
+
+def getInfoTimelineFromStateBySide(stateName, info):
+    candidatesWithTikTok = [candidate for candidate in candidatos[stateName] if candidate['tiktok']]
+    candidatesTimelines = [(getInfoTimelineFromCandidate(candidate['nome'], stateName, info), candidate['nome'])
+                           for candidate in candidatesWithTikTok]
+
+    sideTimelines = {side: pd.Series() for side in ['esquerda', 'direita', 'centro']}
+
+    for candidateTimeline in candidatesTimelines:
+        timeline = candidateTimeline[0]
+        candidateSide = getPartyAlignment(getCandidateParty(candidateTimeline[1], stateName))
+
+        for date, count in timeline.items():
+            sideTimelines[candidateSide][date] = sideTimelines[candidateSide].get(date, 0) + count
+
+    return sortSideTimelines(sideTimelines)
+
+
+def getInfoTimelineFromCountry(info):
+    states = candidatos.keys()
+    statesTimelines = [(getInfoTimelineFromStateBySide(state, info), state) for state in states]
+
+    countryTimelines = {side: pd.Series() for side in ['esquerda', 'direita', 'centro']}
+    for group in statesTimelines:
+        stateTimeline = group[0]
+        state = group[1]
+
+        for side in stateTimeline:
+            timeline = stateTimeline[side]
+
+            for date, count in timeline.items():
+                if type(date) == pd.Timestamp:
+                    print(f'{state}: {date}')
+                countryTimelines[side][date] = countryTimelines[side].get(date, 0) + count
+
+    return sortSideTimelines(countryTimelines)
+
+
 def getPostsTimelineFromState(stateName):
     candidatesWithTikTok = [candidate for candidate in candidatos[stateName] if candidate['tiktok']]
     candidatesTimelines = [(getPostsTimelineFromCandidate(candidate['nome'], stateName), candidate['nome'])
@@ -181,3 +247,44 @@ def getPostsTimelineFromStateBySide(stateName):
             sideTimelines[side][date] = sideTimelines[side].get(date, 0)
 
     return sideTimelines
+
+
+def getCountryPostsTimeline():
+    countryTimelines = {side: pd.Series(dtype=pd.Int64Dtype()) for side in ['esquerda', 'direita', 'centro']}
+
+    states = list(candidatos.keys())
+    for state in states:
+        stateTimeline = getPostsTimelineFromStateBySide(state)
+
+        for side in stateTimeline:
+            for date, count in stateTimeline[side].items():
+                countryTimelines[side][date] = countryTimelines[side].get(date, 0) + count
+
+    return sortSideTimelines(countryTimelines)
+
+
+def createPostsTimeline(sideTimelines, title):
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    for side in sideTimelines:
+        if side == 'esquerda':
+            color = 'red'
+        elif side == 'direita':
+            color = 'orange'
+        else:
+            color = 'blue'
+
+        xAxis = sideTimelines[side].index
+        ax.plot(xAxis, sideTimelines[side].values, color=color, marker='.', label=f"{side.capitalize()}")
+
+    plt.grid(True, which='major', axis='y', linestyle='--')
+    ax.spines['right'].set_color('none')
+    ax.spines['top'].set_color('none')
+    ax.xaxis.set_major_locator(plt.MaxNLocator(5))
+    plt.legend()
+    fig.supxlabel("Data", fontweight='bold', fontsize=15)
+    fig.supylabel(title.capitalize(), fontweight='bold', fontsize=15)
+    plt.tight_layout()
+
+    plt.savefig(f"{title.capitalize()}.png", dpi=300, bbox_inches='tight')
+    plt.close(fig)
