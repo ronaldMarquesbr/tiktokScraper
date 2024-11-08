@@ -10,6 +10,12 @@ def convertTimestamp(ts):
     return data_formatada
 
 
+def convertStringToTimestamp(date):
+    dt = datetime.strptime(date, '%d/%m/%Y')
+    timestamp = int(dt.timestamp())
+    return timestamp
+
+
 def convertDateToTimestamp(date):
     return datetime.strptime(date, '%d/%m/%Y')
 

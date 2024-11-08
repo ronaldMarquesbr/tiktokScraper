@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 from files import getStateFolder, getCandidatePostsBeforeElection
 from partidos import getPartyAlignment, getCandidateParty
 from candidatos import candidatos
-from utils import createDictWithZeros
+from utils import createDictWithZeros, convertTimestamp, convertStringToTimestamp
+from table import createTableFromDf
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 0)
@@ -189,21 +190,18 @@ def getInfoTimelineFromStateBySide(stateName, info):
     return sortSideTimelines(sideTimelines)
 
 
-def getInfoTimelineFromCountry(info):
+def getInfoTimelineFromCountryBySide(info):
     states = candidatos.keys()
     statesTimelines = [(getInfoTimelineFromStateBySide(state, info), state) for state in states]
 
     countryTimelines = {side: pd.Series() for side in ['esquerda', 'direita', 'centro']}
     for group in statesTimelines:
         stateTimeline = group[0]
-        state = group[1]
 
         for side in stateTimeline:
             timeline = stateTimeline[side]
 
             for date, count in timeline.items():
-                if type(date) == pd.Timestamp:
-                    print(f'{state}: {date}')
                 countryTimelines[side][date] = countryTimelines[side].get(date, 0) + count
 
     return sortSideTimelines(countryTimelines)
@@ -288,3 +286,66 @@ def createPostsTimeline(sideTimelines, title):
 
     plt.savefig(f"{title.capitalize()}.png", dpi=300, bbox_inches='tight')
     plt.close(fig)
+
+
+def getInfoTimelineFromCountryConcise(info):
+    infoTimeline = pd.Series()
+    res = getInfoTimelineFromCountryBySide(info)
+    for sid in res.values():
+        for date, count in sid.items():
+            infoTimeline[date] = infoTimeline.get(date, 0) + count
+
+    return infoTimeline.sort_values(ascending=False)
+
+
+def getInfoTimelineFromCountry(info):
+    states = candidatos.keys()
+    statesObj = [(getInfoTimelineFromState(state, info), state) for state in states]
+    statesTimelines = [stateObj[0] for stateObj in statesObj]
+
+    allDates = set()
+
+    for stateTimeline in statesTimelines:
+        allDates = allDates | set(stateTimeline.index)
+
+    allDates = list(allDates)
+    allDates = [convertStringToTimestamp(date) for date in allDates]
+    allDates.sort()
+    allDates = [convertTimestamp(date) for date in allDates]
+
+    for stateTimeline in statesTimelines:
+        for date in allDates:
+            stateTimeline[date] = stateTimeline.get(date, 0)
+
+    timeline = pd.DataFrame(columns=states)
+
+    for date in allDates:
+        tempTimeline = {'date': date}
+        for stateObj in statesObj:
+            tempTimeline[stateObj[1]] = [stateObj[0][date]]
+
+        timeline = pd.concat([timeline, pd.DataFrame(tempTimeline)], ignore_index=True)
+
+    timeline.set_index('date', inplace=True)
+    totais = []
+    for date in timeline.index:
+        total = timeline.loc[date].sum()
+        totais.append(total)
+
+    timeline['total'] = totais
+
+    return timeline
+
+
+def getInfoTimelineFromState(stateName, info):
+    candidatesWithTikTok = [candidate for candidate in candidatos[stateName] if candidate['tiktok']]
+    candidatesTimelines = [getInfoTimelineFromCandidate(candidate['nome'], stateName, info)
+                           for candidate in candidatesWithTikTok]
+
+    stateTimeline = pd.Series()
+
+    for candidateTimeline in candidatesTimelines:
+        for date, count in candidateTimeline.items():
+            stateTimeline[date] = stateTimeline.get(date, 0) + count
+
+    return stateTimeline.sort_values(ascending=False)
