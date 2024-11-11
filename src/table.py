@@ -36,9 +36,10 @@ def createTableFromDf(df, title):
     values = [[value for value in row] for row in df.values]
     # values = [[formatNumber(value) for value in row] for row in df.values]
     columns = [col.capitalize() for col in df.columns]
-    labels = [changeLabelName(label) for label in df.index]
+    # labels = [changeLabelName(label) for label in df.index]
 
-    ax.table(cellText=values, colLabels=columns, rowLabels=labels, loc='center', cellLoc='center')
+    ax.table(cellText=values, colLabels=columns, loc='center', cellLoc='center')
+    # ax.table(cellText=values, colLabels=columns, rowLabels=labels, loc='center', cellLoc='center')
     ax.set_title(title, fontsize=16, fontweight='bold', loc='center', pad=20, x=0.375)
     plt.tight_layout()
     # plt.savefig(f"table.pdf", format='pdf', dpi=300)

@@ -108,7 +108,7 @@ def getCountryOverview():
 
         overviewDf = pd.concat([overviewDf, pd.Series(stateOverview).to_frame().T], ignore_index=True)
 
-    orderedOverview = overviewDf.sort_values(by='likes', ascending=False)
+    orderedOverview = overviewDf.sort_values(by='playCount', ascending=False)
     return orderedOverview
 
 
@@ -349,3 +349,26 @@ def getInfoTimelineFromState(stateName, info):
             stateTimeline[date] = stateTimeline.get(date, 0) + count
 
     return stateTimeline.sort_values(ascending=False)
+
+
+def getAllCandidatesWithTikTok():
+    states = candidatos.keys()
+
+    allCandidates = pd.DataFrame()
+
+    for state in states:
+        stateOverview = pd.DataFrame(getStateOverview(state))
+        stateOverview['state'] = state
+        allCandidates = pd.concat([allCandidates, stateOverview], ignore_index=True)
+
+    return allCandidates
+
+
+def getAllCandidatesBySide():
+    allCandidates = getAllCandidatesWithTikTok()
+    return {
+        side: allCandidates[allCandidates['side'] == side]
+        .sort_values(by='playCount', ascending=False)
+        .reset_index(drop=True)
+        for side in ['esquerda', 'direita', 'centro']
+    }
