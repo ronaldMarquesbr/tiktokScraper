@@ -1,5 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from ast import literal_eval
 from files import getStateFolder, getCandidatePostsBeforeElection
 from partidos import getPartyAlignment, getCandidateParty
 from candidatos import candidatos
@@ -44,6 +46,25 @@ def getCandidateOverview(candidateName, state):
         'duration': candidateDf['duration'].sum(),
         'postsCount': len(candidateDf),
         'votes': [candidate['votos'] for candidate in candidatos[state] if candidate['nome'] == candidateName][0],
+    }
+
+    return candidateOverview
+
+
+def getCandidateHashtags(candidateName, state):
+    candidateObject = getCandidatePostsBeforeElection(candidateName, state)
+    candidateDf = candidateObject['df']
+    allTags = []
+    candidateTags = candidateDf['tags'].tolist()
+
+    for candidateTag in candidateTags:
+        allTags.extend(literal_eval(f"{candidateTag}"))
+
+    candidateOverview = {
+        'name': candidateName,
+        'party': getCandidateParty(candidateName, state),
+        'side': getPartyAlignment(getCandidateParty(candidateName, state)),
+        'tags': allTags
     }
 
     return candidateOverview
@@ -372,3 +393,46 @@ def getAllCandidatesBySide():
         .reset_index(drop=True)
         for side in ['esquerda', 'direita', 'centro']
     }
+
+
+def getHashtagsFromStateBySide(state):
+    stateCandidates = [candidate for candidate in candidatos[state] if candidate['tiktok']]
+
+    hashtags = {side: [] for side in ['esquerda', 'direita', 'centro']}
+
+    for candidate in stateCandidates:
+        candidateHashtags = getCandidateHashtags(candidate['nome'], state)
+        hashtags[candidateHashtags['side']].extend(candidateHashtags['tags'])
+
+    return hashtags
+
+
+def getHashtagsFromCountryBySide():
+    states = candidatos.keys()
+    countryHashtags = {side: [] for side in ['esquerda', 'direita', 'centro']}
+
+    for state in states:
+        stateHashtags = getHashtagsFromStateBySide(state)
+        for side in countryHashtags:
+            countryHashtags[side].extend(stateHashtags[side])
+
+    return countryHashtags
+
+
+def getHashtagsFromCountry():
+    sideHashTags = getHashtagsFromCountryBySide()
+    countryHashtags = []
+
+    for side in sideHashTags:
+        countryHashtags.extend(sideHashTags[side])
+
+    return countryHashtags
+
+
+def generateWordCloud(stringList):
+    wordList = ' '.join(stringList)
+    wordcloud = WordCloud(width=800, height=400, background_color='white', collocations=False).generate(wordList)
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis('off')
+    plt.savefig("nuvem.png", dpi=300)
