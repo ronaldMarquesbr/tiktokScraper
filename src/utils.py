@@ -84,3 +84,24 @@ def convertStringToDatetimeFromSeries(dateSeries):
 def nameAbbreviation(name):
     return ''.join([phrase[0] for phrase in name.split()])
 
+
+def formatStateName(stateName):
+    formattedName = ''
+
+    if stateName == 'saoPaulo':
+        return 'São Paulo'
+
+    if stateName == 'goiania':
+        return 'Goiânia'
+
+    for position, letter in enumerate(stateName):
+        if letter.upper() == letter:
+            formattedName += ' ' + letter
+
+        elif position == 0:
+            formattedName += letter.upper()
+
+        else:
+            formattedName += letter
+
+    return formattedName

@@ -6,8 +6,10 @@ from ast import literal_eval
 from files import getStateFolder, getCandidatePostsBeforeElection
 from partidos import getPartyAlignment, getCandidateParty
 from candidatos import candidatos
-from utils import createDictWithZeros, convertTimestamp, convertStringToTimestamp, nameAbbreviation
+from utils import (createDictWithZeros, convertTimestamp, convertStringToTimestamp,
+                   nameAbbreviation, formatStateName)
 from table import createTableFromDf
+import numpy
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 0)
@@ -439,7 +441,7 @@ def generateWordCloud(stringList):
     plt.savefig("nuvem.png", dpi=300)
 
 
-def createVotesAndInteractionsPlot(stateName):
+def getAllCandidatesFromState(stateName):
     candidatesOverview = pd.DataFrame(getStateOverview(stateName))
     candidatesOverview['interactions'] = (candidatesOverview['likes'] +
                                           candidatesOverview['shares'] +
@@ -468,6 +470,12 @@ def createVotesAndInteractionsPlot(stateName):
 
     candidatesOverview.sort_values(by='votes', inplace=True)
 
+    return candidatesOverview
+
+
+def createVotesAndInteractionsPlot(stateName):
+    candidatesOverview = getAllCandidatesFromState(stateName)
+
     fig, ax = plt.subplots(figsize=(8, 6))
 
     names = candidatesOverview['name'].tolist()
@@ -490,3 +498,34 @@ def createVotesAndInteractionsPlot(stateName):
 
     plt.savefig(f'{stateName}.png', format='png', dpi=300)
     plt.close(fig)
+
+
+def votesAndInteractionsCorrelationFromState(stateName):
+    candidatesOverview = getAllCandidatesFromState(stateName)
+
+    correlation = candidatesOverview['votes'].corr(candidatesOverview['interactions'])
+
+    return correlation
+
+
+def getCorrelationVotesFromCountry():
+    correlations = pd.Series()
+    states = candidatos.keys()
+    for state in states:
+        correlations[state] = votesAndInteractionsCorrelationFromState(state)
+
+    return correlations
+
+def createBarPlotFromCorrelations():
+    correlations = getCorrelationVotesFromCountry()
+    statesNames = [formatStateName(state) for state in correlations.index]
+    # Plotando o gráfico de barras
+    plt.figure(figsize=(10, 6))
+    plt.bar(statesNames, correlations.values, color='green', alpha=0.5)
+    plt.xlabel('Município', fontsize=14, fontweight='bold')
+    plt.ylabel('Coeficiente de Correlação (Pearson)', fontsize=14, fontweight='bold')
+    plt.ylim(-1, 1)
+    plt.xticks(rotation=28, fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.tight_layout()
+    plt.savefig('correlations.png', format='png', dpi=300)
