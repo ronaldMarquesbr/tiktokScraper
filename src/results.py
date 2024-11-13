@@ -1,11 +1,12 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 from wordcloud import WordCloud
 from ast import literal_eval
 from files import getStateFolder, getCandidatePostsBeforeElection
 from partidos import getPartyAlignment, getCandidateParty
 from candidatos import candidatos
-from utils import createDictWithZeros, convertTimestamp, convertStringToTimestamp
+from utils import createDictWithZeros, convertTimestamp, convertStringToTimestamp, nameAbbreviation
 from table import createTableFromDf
 
 pd.set_option('display.max_columns', None)
@@ -436,3 +437,56 @@ def generateWordCloud(stringList):
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis('off')
     plt.savefig("nuvem.png", dpi=300)
+
+
+def createVotesAndInteractionsPlot(stateName):
+    candidatesOverview = pd.DataFrame(getStateOverview(stateName))
+    candidatesOverview['interactions'] = (candidatesOverview['likes'] +
+                                          candidatesOverview['shares'] +
+                                          candidatesOverview['saves'])
+
+    stateCandidatesWithoutTikTok = [candidate for candidate in candidatos[stateName]
+                                    if candidate['nome'] not in candidatesOverview['name'].tolist()]
+
+    for candidate in stateCandidatesWithoutTikTok:
+        candidateSeries = pd.DataFrame({
+            'name': [candidate['nome']],
+            'party': [candidate['partido']],
+            'side': [getPartyAlignment(candidate['partido'])],
+            'votes': [candidate['votos']],
+            'likes': [0],
+            'comments': [0],
+            'shares': [0],
+            'playCount': [0],
+            'saves': [0],
+            'duration': [0],
+            'postsCount': [0],
+            'interactions': [0]
+        })
+
+        candidatesOverview = pd.concat([candidatesOverview, candidateSeries], ignore_index=True)
+
+    candidatesOverview.sort_values(by='votes', inplace=True)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    names = candidatesOverview['name'].tolist()
+    names = [nameAbbreviation(name) for name in names]
+
+    interactionsAmount = candidatesOverview['interactions'].sum()
+    votesAmount = candidatesOverview['votes'].sum()
+
+    ax.bar(names, candidatesOverview['votes'] / votesAmount, color='skyblue', label='Votos')
+    ax.plot(names, candidatesOverview['interactions'] / interactionsAmount,
+            color='red', marker='.', label='Interações')
+
+    ax.set_xlabel('Candidatos', fontweight='bold', fontsize=14)
+    ax.set_ylabel('Apoio recebido', fontweight='bold', fontsize=14)
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0))
+    ax.legend()
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    plt.savefig(f'{stateName}.png', format='png', dpi=300)
+    plt.close(fig)

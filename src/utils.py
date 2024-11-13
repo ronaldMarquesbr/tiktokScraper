@@ -80,3 +80,7 @@ def convertStringToDatetimeFromSeries(dateSeries):
 
     return convertedDateSeries
 
+
+def nameAbbreviation(name):
+    return ''.join([phrase[0] for phrase in name.split()])
+
