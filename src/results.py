@@ -303,9 +303,15 @@ def createPostsTimeline(sideTimelines, title):
     ax.spines['right'].set_color('none')
     ax.spines['top'].set_color('none')
     ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-    plt.legend()
-    fig.supxlabel("Data", fontweight='bold', fontsize=15)
+    plt.legend(fontsize=15)
+
+
+    fig.supxlabel("Data", fontweight='bold', fontsize=16)
     fig.supylabel(title.capitalize(), fontweight='bold', fontsize=15)
+
+    ax.tick_params(axis='x', labelsize=15)
+    ax.tick_params(axis='y', labelsize=16)
+
     plt.tight_layout()
 
     plt.savefig(f"{title.capitalize()}.png", dpi=300, bbox_inches='tight')
@@ -488,8 +494,12 @@ def createVotesAndInteractionsPlot(stateName):
     ax.plot(names, candidatesOverview['interactions'] / interactionsAmount,
             color='red', marker='.', label='Interações')
 
-    ax.set_xlabel('Candidatos', fontweight='bold', fontsize=14)
-    ax.set_ylabel('Apoio recebido', fontweight='bold', fontsize=14)
+    ax.set_xlabel('Candidatos', fontweight='bold', fontsize=16)
+    ax.set_ylabel('Apoio recebido', fontweight='bold', fontsize=16)
+
+    ax.tick_params(axis='x', labelsize=15)
+    ax.tick_params(axis='y', labelsize=16)
+
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0))
     ax.legend()
     ax.grid(axis='y', linestyle='--', alpha=0.7)
@@ -522,10 +532,13 @@ def createBarPlotFromCorrelations():
     # Plotando o gráfico de barras
     plt.figure(figsize=(10, 6))
     plt.bar(statesNames, correlations.values, color='green', alpha=0.5)
-    plt.xlabel('Município', fontsize=14, fontweight='bold')
-    plt.ylabel('Coeficiente de Correlação (Pearson)', fontsize=14, fontweight='bold')
-    plt.ylim(-1, 1)
-    plt.xticks(rotation=28, fontsize=14)
-    plt.yticks(fontsize=14)
+    plt.xlabel('Município', fontsize=16, fontweight='bold')
+    plt.ylabel('Coeficiente de Correlação (Pearson)', fontsize=16, fontweight='bold')
+    plt.ylim(-0.25, 1)
+    plt.xticks(rotation=24, fontsize=16)
+    plt.yticks(fontsize=16)
     plt.tight_layout()
     plt.savefig('correlations.png', format='png', dpi=300)
+
+
+createPostsTimeline(getInfoTimelineFromCountryBySide('playCount'), 'Visualizações (em dezenas de milhões)')
